@@ -10,7 +10,7 @@ import time
 
 MIN_PUZZLES_TO_QUALIFY = 50
 SQL_URI = 'postgresql://nubela@localhost/coderage'
-CHARS = string.ascii_letters + string.digits # the characters to make up the random password
+RANDOM_CHARS = string.ascii_letters + string.digits
 
 #--- private vars ---
 
@@ -22,12 +22,18 @@ db = SQLAlchemy(app)
 #--- db schema ---
 
 class CRUser(db.Model):
+    """
+    Database table to represent a user
+    """
     id = db.Column(db.Unicode(255), primary_key=True)
     username = db.Column(db.Unicode(255))
     solved_puzzles_count = db.Column(db.Integer)
 
 
 class Puzzle(db.Model):
+    """
+    Database table to represent Sudoku puzzles
+    """
     id = db.Column(db.Unicode(255), primary_key=True)
     user_id = db.Column(db.Unicode(255), db.ForeignKey('cr_user.id'))
     incomplete_puzzle = db.Column(db.Unicode(255))
@@ -43,6 +49,9 @@ class Puzzle(db.Model):
 
 
 class SolvedPuzzle(db.Model):
+    """
+    Database table to record that a user has solved a puzzle
+    """
     id = db.Column(db.Unicode(255), primary_key=True)
     created_user_id = db.Column(db.Unicode(255), db.ForeignKey('cr_user.id'))
     puzzle_id = db.Column(db.Unicode(255), db.ForeignKey('puzzle.id'))
@@ -85,7 +94,7 @@ def get_user_ranks():
     serialized_users = []
     for rank, u in enumerate(all_users):
         serialized_users += [{
-                                 "rank": rank+1,
+                                 "rank": rank + 1,
                                  "username": u.username,
                                  "puzzles_solved": u.solved_puzzles_count,
                                  "puzzles_uploaded": get_puzzle_count_from_user(u.id),
@@ -134,7 +143,7 @@ def httpget_sudoku_puzzle():
     if puzzle_count < MIN_PUZZLES_TO_QUALIFY:
         return jsonify({"status": "error",
                         "error": "please submit %d puzzles to qualify. you have currently uploaded %d puzzles" % (
-                        MIN_PUZZLES_TO_QUALIFY, puzzle_count)})
+                            MIN_PUZZLES_TO_QUALIFY, puzzle_count)})
 
     puzzles = db.session.query(Puzzle).filter(Puzzle.user_id != user_id).order_by(asc(Puzzle.timestamp)).limit(
         puzzle_count).all()
@@ -158,7 +167,7 @@ def post_sudoku_puzzle():
     if puzzle_count < MIN_PUZZLES_TO_QUALIFY:
         return jsonify({"status": "error",
                         "error": "please submit %d puzzles to qualify. you have currently uploaded %d puzzles" % (
-                        MIN_PUZZLES_TO_QUALIFY, puzzle_count)})
+                            MIN_PUZZLES_TO_QUALIFY, puzzle_count)})
     if 0 in completed_puzzle:
         return jsonify({"status": "error", "error": "solution is erroneous"})
     if get_solution_record(puzzle_id, user_id) is not None:
@@ -176,10 +185,16 @@ def post_sudoku_puzzle():
 #--- util methods ---
 
 def get_puzzle_count_from_user(user_id):
+    """
+    Gets the nunmber of puzzles that the user has uploaded
+    """
     return db.session.query(Puzzle).filter(Puzzle.user_id == user_id).count()
 
 
 def new_user(username):
+    """
+    Creates a database record (row) of a user
+    """
     #create the user
     user = CRUser()
     user.id = generate_uuid()
@@ -191,6 +206,9 @@ def new_user(username):
 
 
 def new_puzzle(complete_puzzle_json, incomplete_puzzle_json, user_id):
+    """
+    Creates a database record (row) of a puzzle
+    """
     puzzle = Puzzle()
     puzzle.id = generate_uuid()
     puzzle.complete_puzzle = complete_puzzle_json
@@ -203,12 +221,18 @@ def new_puzzle(complete_puzzle_json, incomplete_puzzle_json, user_id):
 
 
 def get_puzzle_from_complete(complete_puzzle_json):
+    """
+    Fetches a database record of a puzzle from a completed solution if it exists
+    """
     p = (db.session.query(Puzzle).
          filter(Puzzle.complete_puzzle == complete_puzzle_json))
     return p.first()
 
 
 def get_solution_record(puzzle_id, user_id):
+    """
+    Fetches a database record of a log that a user has solved a puzzle
+    """
     r = (db.session.query(SolvedPuzzle).
          filter(SolvedPuzzle.puzzle_id == puzzle_id).
          filter(SolvedPuzzle.created_user_id == user_id)
@@ -217,6 +241,9 @@ def get_solution_record(puzzle_id, user_id):
 
 
 def new_solution_record(user_id, puzzle_id):
+    """
+    Creates a database record (row) of a user siccessfully completing a puzzle
+    """
     user = get_user_userid(user_id)
     user.solved_puzzles_count += 1
 
@@ -233,25 +260,38 @@ def new_solution_record(user_id, puzzle_id):
 
 
 def random_string():
-    """ Create a string of random length between 8 and 16
-        characters long, made up of numbers and letters.
     """
-    return "".join(choice(CHARS) for x in range(randint(8, 16)))
+    Create a string of random length between 8 and 16
+    characters long, made up of numbers and letters.
+    """
+    return "".join(choice(RANDOM_CHARS) for x in range(randint(8, 16)))
 
 
 def generate_uuid():
+    """
+    Generates a UUID
+    """
     return str(uuid.uuid1())
 
 
 def get_user_username(username):
+    """
+    Fetches a user record from an username
+    """
     return db.session.query(CRUser).filter(CRUser.username == username).first()
 
 
 def get_user_userid(user_id):
+    """
+    Fetches a user record from an id
+    """
     return db.session.query(CRUser).filter(CRUser.id == user_id).first()
 
 
 def get_puzzle(puzzle_id):
+    """
+    Fetches a puzzle record from an id
+    """
     return db.session.query(Puzzle).filter(Puzzle.id == puzzle_id).first()
 
 

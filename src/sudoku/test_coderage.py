@@ -1,5 +1,7 @@
 """
 Unit tests for CodeRage API Platform
+---
+Note: They don't work independently yet, and also the database needs to be clean.
 """
 import unittest
 import urllib
